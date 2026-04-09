@@ -16,8 +16,8 @@ custom_css = """
     /* Cacher le menu natif, le bouton deploy, et LA BARRE DE CHARGEMENT pour éviter le clignotement */
     #MainMenu {visibility: hidden;}
     .stDeployButton {display:none;}
-    .st-emotion-cache-1dp5vir {display: none !important;} /* Masque la barre de progression en haut */
-    .st-emotion-cache-1aege4i {display: none !important;} /* Masque l'indicateur "Running..." */
+    .st-emotion-cache-1dp5vir {display: none !important;} 
+    .st-emotion-cache-1aege4i {display: none !important;} 
 
     html, body, [class*="css"] {
         font-family: 'Plus Jakarta Sans', sans-serif !important;
@@ -86,7 +86,6 @@ custom_css = """
 
     .stSlider [data-testid="stTickBar"] { display: none; }
     
-    /* Hover pour le tooltip Plotly */
     .hoverlayer { font-family: 'Plus Jakarta Sans', sans-serif !important; }
 </style>
 """
@@ -100,13 +99,21 @@ if 'user_prenom' not in st.session_state:
 if 'user_nom' not in st.session_state:
     st.session_state.user_nom = ""
 
-# Fonction de déconnexion
+# --- 4. FONCTIONS METIER ---
 def logout():
     st.session_state.acces_debloque = False
     st.session_state.user_prenom = ""
     st.session_state.user_nom = ""
 
-# --- 4. FONCTIONS DE CALCUL ---
+def format_montant(val):
+    """Formate dynamiquement le slider de k à M selon le montant."""
+    if val >= 1000000:
+        return f"{val/1000000:g} M€"
+    elif val >= 10000:
+        return f"{val/1000:g} k€"
+    else:
+        return f"{val} €"
+
 def ajouter_contact_getresponse(prenom, nom, email):
     return True 
 
@@ -125,7 +132,7 @@ def calculer_simulation(montant, duree_mois, reinvestissement, plateforme_data):
     df["Rendement Net Réel (€)"] = df["Rendement Brut (€)"] - df["Impact Frais (€)"] - df["Impact Défaut (Est. Perte) (€)"]
     return df
 
-# --- 5. FONCTION GENERATION PDF (RESTAURÉE ET COMPLÈTE) ---
+# --- 5. FONCTION GENERATION PDF (AVEC TABLEAU PARFAIT) ---
 def generer_pdf_premium(prenom, nom, montant, duree, gain_baltis_total, df_complet):
     class PDF(FPDF):
         def header(self):
@@ -153,6 +160,7 @@ def generer_pdf_premium(prenom, nom, montant, duree, gain_baltis_total, df_compl
     pdf.set_margins(15, 30, 15)
     pdf.ln(5)
 
+    # Info Personnelle
     pdf.set_font("Arial", "B", 14)
     pdf.set_text_color(10, 37, 64)
     pdf.cell(0, 10, txt=f"Rapport de Simulation Personnalisé pour : {prenom} {nom}", ln=True, align='C')
@@ -167,6 +175,7 @@ def generer_pdf_premium(prenom, nom, montant, duree, gain_baltis_total, df_compl
     pdf.cell(180, 8, txt=f"  Gain Réel Estimé Baltis (Avant Impôts) : {gain_baltis_total:,.0f} EUR", ln=True)
     pdf.ln(15)
 
+    # Titre Tableau
     pdf.set_font("Arial", "B", 11)
     pdf.set_text_color(243, 97, 33) 
     pdf.cell(0, 10, txt="Comparaison des Rendements Nets de Frais et Risque", ln=True)
@@ -175,36 +184,51 @@ def generer_pdf_premium(prenom, nom, montant, duree, gain_baltis_total, df_compl
     pdf.line(pdf.get_x(), pdf.get_y(), 195, pdf.get_y()) 
     pdf.ln(2)
 
-    pdf.set_font("Arial", "B", 9)
+    # --- TABLEAU PARFAIT ---
+    pdf.set_font("Arial", "B", 8.5)
     pdf.set_text_color(255, 255, 255)
     pdf.set_fill_color(10, 37, 64) 
-    pdf.cell(40, 10, "Plateforme", border=1, align='C', fill=True)
-    pdf.cell(35, 10, "Gain Brut (EUR)", border=1, align='C', fill=True)
-    pdf.cell(35, 10, "Impact Frais (EUR)", border=1, align='C', fill=True)
-    pdf.cell(40, 10, "Impact Risque Perte", border=1, align='C', fill=True)
-    pdf.cell(30, 10, "Gain Réel (EUR)", border=1, align='C', fill=True)
+    
+    # Largeurs ajustées (Total = 180mm) pour éviter tout dépassement
+    w_plat = 50
+    w_brut = 32
+    w_frais = 32
+    w_risq = 34
+    w_net = 32
+
+    pdf.cell(w_plat, 10, "Plateforme", border=1, align='C', fill=True)
+    pdf.cell(w_brut, 10, "Gain Brut", border=1, align='C', fill=True)
+    pdf.cell(w_frais, 10, "Impact Frais", border=1, align='C', fill=True)
+    pdf.cell(w_risq, 10, "Risque Perte", border=1, align='C', fill=True)
+    pdf.cell(w_net, 10, "Gain Réel Net", border=1, align='C', fill=True)
     pdf.ln()
 
-    pdf.set_font("Arial", "", 9)
+    pdf.set_font("Arial", "", 8.5)
     pdf.set_text_color(0, 0, 0)
     fill_row = False
+    
     for index, row in df_complet.iterrows():
         if fill_row:
             pdf.set_fill_color(248, 250, 253)
         else:
             pdf.set_fill_color(255, 255, 255)
         
-        pdf.cell(40, 9, row['Plateforme'], border=1, align='C', fill=True)
-        pdf.cell(35, 9, f"{row['Rendement Brut (€)']:.0f}", border=1, align='C', fill=True)
-        pdf.cell(35, 9, f"- {row['Impact Frais (€)']:.0f}", border=1, align='C', fill=True)
-        pdf.cell(40, 9, f"- {row['Impact Défaut (Est. Perte) (€)']:.0f}", border=1, align='C', fill=True)
-        if row['Plateforme'] == "Baltis": pdf.set_font("Arial", "B", 9)
-        pdf.cell(30, 9, f"{row['Rendement Net Réel (€)']:.0f}", border=1, align='C', fill=True)
-        pdf.set_font("Arial", "", 9)
+        pdf.cell(w_plat, 9, str(row['Plateforme']), border=1, align='C', fill=True)
+        pdf.cell(w_brut, 9, f"{row['Rendement Brut (€)']:.0f} EUR", border=1, align='C', fill=True)
+        pdf.cell(w_frais, 9, f"- {row['Impact Frais (€)']:.0f} EUR", border=1, align='C', fill=True)
+        pdf.cell(w_risq, 9, f"- {row['Impact Défaut (Est. Perte) (€)']:.0f} EUR", border=1, align='C', fill=True)
+        
+        if row['Plateforme'] == "Baltis": 
+            pdf.set_font("Arial", "B", 8.5)
+        
+        pdf.cell(w_net, 9, f"{row['Rendement Net Réel (€)']:.0f} EUR", border=1, align='C', fill=True)
+        pdf.set_font("Arial", "", 8.5)
         pdf.ln()
         fill_row = not fill_row
 
     pdf.ln(10)
+    
+    # Synthèse Baltis
     pdf.set_font("Arial", "B", 11)
     pdf.set_text_color(10, 37, 64)
     pdf.cell(0, 10, txt="Synthèse Projection Flux de Capital (Baltis)", ln=True)
@@ -245,7 +269,6 @@ with col_header1:
     st.markdown("<p style='color: #64748B; margin: 5px 0 20px 0; font-size: 1.1rem; border-bottom: 1px solid #E2E8F0; padding-bottom: 15px;'>Calculez l'impact réel des frais et du défaut sur votre épargne.</p>", unsafe_allow_html=True)
 
 with col_header2:
-    # --- DETECTION DU LOGO ---
     if os.path.exists("logo.png"):
         st.image("logo.png", use_container_width=True)
     else:
@@ -257,10 +280,9 @@ with col_header2:
 
 
 # ==========================================
-# ETAPE 1 : FORMULAIRE DE CAPTURE (Gated Content)
+# ETAPE 1 : FORMULAIRE DE CAPTURE
 # ==========================================
 if not st.session_state.acces_debloque:
-    
     col_espace1, col_form, col_espace2 = st.columns([1, 2, 1])
     
     with col_form:
@@ -293,11 +315,22 @@ else:
     st.sidebar.markdown(f"<div style='background-color:#0A2540; color:white; padding:15px; border-radius:8px; margin-bottom:20px; text-align:center;'>👋 Bienvenue <b>{st.session_state.user_prenom}</b></div>", unsafe_allow_html=True)
     st.sidebar.markdown("### Vos Paramètres")
     
-    montant_sb = st.sidebar.slider("Montant investi (€)", min_value=1000, max_value=100000, value=20000, step=1000, format="%d €")
-    duree_mois_sb = st.sidebar.select_slider("Durée envisagée", [6, 12, 18, 24], value=12, format_func=lambda x: f"{x} mois")
+    # Génération d'une échelle de valeurs ultra-fine pour un slider fluide (100 à 1 000 000)
+    options_montants = list(range(100, 1000, 100)) + list(range(1000, 10000, 500)) + list(range(10000, 100000, 1000)) + list(range(100000, 1000001, 10000))
+    # Curseur formaté intelligemment (k et M)
+    montant_sb = st.sidebar.select_slider(
+        "Montant investi", 
+        options=options_montants, 
+        value=20000, 
+        format_func=format_montant
+    )
+    
+    # Curseur Durée de 6 à 60 mois
+    duree_mois_sb = st.sidebar.slider("Durée envisagée (mois)", min_value=6, max_value=60, value=12, step=1)
+    
     reinvestissement_sb = st.sidebar.radio("Stratégie (Post-2026)", ["Projet unique (Bullet)", "Réinvestissement des intérêts à chaque remboursement"])
 
-    # --- DECONNEXION ---
+    # Déconnexion
     st.sidebar.markdown("<br><br>", unsafe_allow_html=True)
     if st.sidebar.button("🔄 Se déconnecter / Autre profil"):
         logout()
@@ -341,7 +374,6 @@ else:
         df_plot = df_resultats.copy()
         df_plot = pd.melt(df_plot, id_vars=['Plateforme'], value_vars=['Rendement Brut (€)', 'Impact Frais (€)', 'Impact Défaut (Est. Perte) (€)'])
         
-        # Mappage de jolis noms pour le tooltip au lieu de noms de variables techniques
         df_plot['Nom Variable'] = df_plot['variable'].map({
             'Rendement Brut (€)': 'Gain Théorique',
             'Impact Frais (€)': 'Frais Prélevés',
@@ -352,7 +384,6 @@ else:
                      barmode='relative',
                      color_discrete_map={'Gain Théorique': '#0A2540', 'Frais Prélevés': '#F36121', 'Risque Statistique': '#DC2626'})
         
-        # CUSTOMISATION PREMIUM DES BULLLES (TOOLTIPS)
         fig.update_traces(hovertemplate="<b>%{x}</b><br>%{data.name}: <b>%{y:,.0f} €</b><extra></extra>")
 
         fig.update_layout(
@@ -377,7 +408,6 @@ else:
         
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # Bouton PDF
         pdf_bytes = generer_pdf_premium(st.session_state.user_prenom, st.session_state.user_nom, montant_sb, duree_mois_sb, gain_baltis, df_resultats)
         st.download_button("📄 Télécharger mon Rapport PDF", data=pdf_bytes, file_name="Simulation_Baltis.pdf", mime="application/pdf")
 
