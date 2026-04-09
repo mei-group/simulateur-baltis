@@ -3,42 +3,36 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 from fpdf import FPDF
-import requests
+import os
 
 # --- 1. CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="Simulateur Crowdfunding | Baltis", layout="wide", initial_sidebar_state="expanded")
 
 # --- 2. CSS "PREMIUM+" ---
-# On écrase complètement le style natif de Streamlit
 custom_css = """
 <style>
-    /* Import typo moderne */
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-    /* Cacher les éléments Streamlit (header, footer, menu) */
+    /* Cacher le menu natif, le bouton deploy, et LA BARRE DE CHARGEMENT pour éviter le clignotement */
     #MainMenu {visibility: hidden;}
-    header {visibility: hidden;}
-    footer {visibility: hidden;}
     .stDeployButton {display:none;}
+    .st-emotion-cache-1dp5vir {display: none !important;} /* Masque la barre de progression en haut */
+    .st-emotion-cache-1aege4i {display: none !important;} /* Masque l'indicateur "Running..." */
 
-    /* Application de la typo globale */
     html, body, [class*="css"] {
         font-family: 'Plus Jakarta Sans', sans-serif !important;
         color: #0A2540 !important;
     }
 
-    /* Titres */
     h1 { font-weight: 800; font-size: 2.5rem; letter-spacing: -0.03em; margin-bottom: 0.5rem; color: #0A2540; }
     h2 { font-weight: 700; font-size: 1.8rem; letter-spacing: -0.02em; margin-top: 2rem; color: #0A2540; }
     h3 { font-weight: 600; font-size: 1.4rem; }
 
-    /* Customisation de la Sidebar */
     [data-testid="stSidebar"] {
         background-color: #F8FAFC !important;
         border-right: 1px solid #E2E8F0;
     }
     
-    /* Bouton CTA Streamlit (Download) */
     .stDownloadButton button {
         background-color: #F36121 !important;
         color: white !important;
@@ -56,7 +50,6 @@ custom_css = """
         box-shadow: 0 6px 20px rgba(243, 97, 33, 0.4) !important;
     }
 
-    /* -------------- FORMULAIRE DE CAPTURE -------------- */
     [data-testid="stForm"] {
         background: #FFFFFF;
         border: 1px solid #E2E8F0;
@@ -64,7 +57,6 @@ custom_css = """
         padding: 30px;
         box-shadow: 0 10px 30px rgba(10, 37, 64, 0.05);
     }
-    /* Champs texte du formulaire */
     .stTextInput input {
         border-radius: 8px !important;
         border: 1px solid #CBD5E1 !important;
@@ -77,9 +69,8 @@ custom_css = """
         border-color: #F36121 !important;
         box-shadow: 0 0 0 1px #F36121 !important;
     }
-    /* Bouton de soumission du formulaire */
     [data-testid="stFormSubmitButton"] button {
-        background-color: #0A2540 !important; /* Bleu foncé pour le form */
+        background-color: #0A2540 !important; 
         color: white !important;
         border: none !important;
         border-radius: 8px !important;
@@ -93,8 +84,10 @@ custom_css = """
         background-color: #1a3c5e !important;
     }
 
-    /* Slider styling */
-    .stSlider [data-testid="stTickBar"] { display: none; } /* Enlever les ticks en dessous */
+    .stSlider [data-testid="stTickBar"] { display: none; }
+    
+    /* Hover pour le tooltip Plotly */
+    .hoverlayer { font-family: 'Plus Jakarta Sans', sans-serif !important; }
 </style>
 """
 st.markdown(custom_css, unsafe_allow_html=True)
@@ -107,9 +100,14 @@ if 'user_prenom' not in st.session_state:
 if 'user_nom' not in st.session_state:
     st.session_state.user_nom = ""
 
-# --- 4. FONCTIONS (API & PDF gardées identiques) ---
+# Fonction de déconnexion
+def logout():
+    st.session_state.acces_debloque = False
+    st.session_state.user_prenom = ""
+    st.session_state.user_nom = ""
+
+# --- 4. FONCTIONS DE CALCUL ---
 def ajouter_contact_getresponse(prenom, nom, email):
-    # Simulation pour la démo
     return True 
 
 def calculer_simulation(montant, duree_mois, reinvestissement, plateforme_data):
@@ -127,8 +125,8 @@ def calculer_simulation(montant, duree_mois, reinvestissement, plateforme_data):
     df["Rendement Net Réel (€)"] = df["Rendement Brut (€)"] - df["Impact Frais (€)"] - df["Impact Défaut (Est. Perte) (€)"]
     return df
 
+# --- 5. FONCTION GENERATION PDF (RESTAURÉE ET COMPLÈTE) ---
 def generer_pdf_premium(prenom, nom, montant, duree, gain_baltis_total, df_complet):
-    # (Le code du PDF reste exactement le même, vu qu'il vous convient)
     class PDF(FPDF):
         def header(self):
             self.set_fill_color(10, 37, 64) 
@@ -138,43 +136,132 @@ def generer_pdf_premium(prenom, nom, montant, duree, gain_baltis_total, df_compl
             self.cell(10, 10) 
             self.cell(40, 10, 'BALTIS', 0, 0, 'L')
             self.set_font('Arial', '', 11)
-            self.cell(140, 10, 'SIMULATION CROWDFUNDING', 0, 1, 'R')
+            self.cell(140, 10, 'SIMULATION CROWDFUNDING IMMOBILIER', 0, 1, 'R')
             self.ln(10)
+
         def footer(self):
             self.set_y(-25)
             self.set_font('Arial', 'I', 8)
             self.set_text_color(10, 37, 64)
-            self.multi_cell(0, 4, txt="Mention Légale AMF : Investir comporte des risques. Les performances passées ne préjugent pas des performances futures.", align='C')
+            self.multi_cell(0, 4, txt="Mention Légale AMF (Régulation 2026) : Investir comporte des risques, notamment de perte partielle ou totale du capital. Les performances passées ne préjugent pas des performances futures. Baltis est immatriculée sous le numéro [X] à l'ORIAS et régulée par l'AMF en tant que PSFP.", align='C')
+            self.ln(1)
+            self.cell(0, 5, 'Page ' + str(self.page_no()) + '/{nb}', 0, 0, 'C')
+
     pdf = PDF()
+    pdf.alias_nb_pages()
     pdf.add_page()
+    pdf.set_margins(15, 30, 15)
+    pdf.ln(5)
+
     pdf.set_font("Arial", "B", 14)
-    pdf.cell(0, 10, txt=f"Rapport pour : {prenom} {nom}", ln=True, align='C')
+    pdf.set_text_color(10, 37, 64)
+    pdf.cell(0, 10, txt=f"Rapport de Simulation Personnalisé pour : {prenom} {nom}", ln=True, align='C')
+    pdf.ln(5)
+    pdf.set_fill_color(246, 249, 252)
+    pdf.rect(15, pdf.get_y(), 180, 25, 'F') 
+    pdf.set_font("Arial", "", 10)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(180, 8, txt=f"  Investissement prévu : {montant:,.0f} EUR", ln=True)
+    pdf.cell(180, 8, txt=f"  Durée envisagée : {duree} mois", ln=True)
+    pdf.set_font("Arial", "B", 10)
+    pdf.cell(180, 8, txt=f"  Gain Réel Estimé Baltis (Avant Impôts) : {gain_baltis_total:,.0f} EUR", ln=True)
+    pdf.ln(15)
+
+    pdf.set_font("Arial", "B", 11)
+    pdf.set_text_color(243, 97, 33) 
+    pdf.cell(0, 10, txt="Comparaison des Rendements Nets de Frais et Risque", ln=True)
+    pdf.set_draw_color(10, 37, 64)
+    pdf.set_line_width(0.3)
+    pdf.line(pdf.get_x(), pdf.get_y(), 195, pdf.get_y()) 
+    pdf.ln(2)
+
+    pdf.set_font("Arial", "B", 9)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_fill_color(10, 37, 64) 
+    pdf.cell(40, 10, "Plateforme", border=1, align='C', fill=True)
+    pdf.cell(35, 10, "Gain Brut (EUR)", border=1, align='C', fill=True)
+    pdf.cell(35, 10, "Impact Frais (EUR)", border=1, align='C', fill=True)
+    pdf.cell(40, 10, "Impact Risque Perte", border=1, align='C', fill=True)
+    pdf.cell(30, 10, "Gain Réel (EUR)", border=1, align='C', fill=True)
+    pdf.ln()
+
+    pdf.set_font("Arial", "", 9)
+    pdf.set_text_color(0, 0, 0)
+    fill_row = False
+    for index, row in df_complet.iterrows():
+        if fill_row:
+            pdf.set_fill_color(248, 250, 253)
+        else:
+            pdf.set_fill_color(255, 255, 255)
+        
+        pdf.cell(40, 9, row['Plateforme'], border=1, align='C', fill=True)
+        pdf.cell(35, 9, f"{row['Rendement Brut (€)']:.0f}", border=1, align='C', fill=True)
+        pdf.cell(35, 9, f"- {row['Impact Frais (€)']:.0f}", border=1, align='C', fill=True)
+        pdf.cell(40, 9, f"- {row['Impact Défaut (Est. Perte) (€)']:.0f}", border=1, align='C', fill=True)
+        if row['Plateforme'] == "Baltis": pdf.set_font("Arial", "B", 9)
+        pdf.cell(30, 9, f"{row['Rendement Net Réel (€)']:.0f}", border=1, align='C', fill=True)
+        pdf.set_font("Arial", "", 9)
+        pdf.ln()
+        fill_row = not fill_row
+
     pdf.ln(10)
-    pdf.set_font("Arial", "", 12)
-    pdf.cell(0, 10, txt=f"Gain estimé : {gain_baltis_total:,.0f} EUR", ln=True)
+    pdf.set_font("Arial", "B", 11)
+    pdf.set_text_color(10, 37, 64)
+    pdf.cell(0, 10, txt="Synthèse Projection Flux de Capital (Baltis)", ln=True)
+    pdf.set_line_width(0.3)
+    pdf.line(pdf.get_x(), pdf.get_y(), 195, pdf.get_y())
+    pdf.ln(2)
+    pdf.set_font("Arial", "", 10)
+    pdf.set_fill_color(255, 255, 255)
+    
+    col_w = 60
+    pdf.cell(col_w, 8, txt="Capital Initial Investi :", align='R')
+    pdf.set_font("Arial", "B", 10)
+    pdf.cell(col_w, 8, txt=f"{montant:,.0f} EUR", ln=True, align='L')
+    pdf.set_font("Arial", "", 10)
+    
+    pdf.cell(col_w, 8, txt="Intérêts Réels Générés :", align='R')
+    pdf.set_font("Arial", "B", 10)
+    pdf.set_text_color(45, 106, 79)
+    pdf.cell(col_w, 8, txt=f"+ {gain_baltis_total:,.0f} EUR", ln=True, align='L')
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Arial", "", 10)
+
+    pdf.cell(col_w, 8, txt="Flux de Capital Récupéré :", align='R')
+    pdf.set_font("Arial", "B", 10)
+    pdf.set_fill_color(10, 37, 64)
+    pdf.set_text_color(255, 255, 255)
+    pdf.cell(col_w, 8, txt=f" {montant + gain_baltis_total:,.0f} EUR", ln=True, align='L', fill=True)
+    
     return pdf.output(dest="S").encode("latin-1")
 
 # ==========================================
-# HEADER UI
+# HEADER UI AVEC GESTION DU LOGO
 # ==========================================
-st.markdown("""
-<div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid #E2E8F0; margin-bottom: 30px; margin-top: -30px;">
-    <div>
-        <h1 style="margin:0; font-size: 2rem;">Simulateur de rendement net</h1>
-        <p style="color: #64748B; margin: 5px 0 0 0; font-size: 1.1rem;">Calculez l'impact réel des frais et du défaut sur votre épargne.</p>
-    </div>
-    <div style="background-color: #0A2540; color: white; padding: 10px 20px; border-radius: 8px; font-weight: 800; font-size: 1.2rem; letter-spacing: 2px;">
-        BALTIS
-    </div>
-</div>
-""", unsafe_allow_html=True)
+col_header1, col_header2 = st.columns([0.8, 0.2])
+
+with col_header1:
+    st.markdown("<h1 style='margin:0; font-size: 2rem; margin-top: -10px;'>Simulateur de rendement net</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='color: #64748B; margin: 5px 0 20px 0; font-size: 1.1rem; border-bottom: 1px solid #E2E8F0; padding-bottom: 15px;'>Calculez l'impact réel des frais et du défaut sur votre épargne.</p>", unsafe_allow_html=True)
+
+with col_header2:
+    # --- DETECTION DU LOGO ---
+    if os.path.exists("logo.png"):
+        st.image("logo.png", use_container_width=True)
+    else:
+        st.markdown("""
+        <div style="background-color: #0A2540; color: white; padding: 10px 20px; border-radius: 8px; font-weight: 800; font-size: 1.2rem; letter-spacing: 2px; text-align: center; margin-top: -10px;">
+            BALTIS
+        </div>
+        """, unsafe_allow_html=True)
+
 
 # ==========================================
 # ETAPE 1 : FORMULAIRE DE CAPTURE (Gated Content)
 # ==========================================
 if not st.session_state.acces_debloque:
     
-    col_espace1, col_form, col_espace2 = st.columns([1, 2, 1]) # Centrer le formulaire
+    col_espace1, col_form, col_espace2 = st.columns([1, 2, 1])
     
     with col_form:
         st.markdown("<h3 style='text-align: center; margin-bottom: 5px;'>Accédez à votre simulation personnalisée</h3>", unsafe_allow_html=True)
@@ -186,7 +273,6 @@ if not st.session_state.acces_debloque:
             nom_input = col2.text_input("Nom")
             email_input = st.text_input("Adresse e-mail")
             
-            # Bouton stylisé via le CSS global
             submitted = st.form_submit_button("Débloquer mon simulateur gratuit")
             
             if submitted:
@@ -211,6 +297,12 @@ else:
     duree_mois_sb = st.sidebar.select_slider("Durée envisagée", [6, 12, 18, 24], value=12, format_func=lambda x: f"{x} mois")
     reinvestissement_sb = st.sidebar.radio("Stratégie (Post-2026)", ["Projet unique (Bullet)", "Réinvestissement des intérêts à chaque remboursement"])
 
+    # --- DECONNEXION ---
+    st.sidebar.markdown("<br><br>", unsafe_allow_html=True)
+    if st.sidebar.button("🔄 Se déconnecter / Autre profil"):
+        logout()
+        st.rerun()
+
     # --- DATA ---
     data_sources = {
         "Plateforme": ["Baltis", "Plateforme A (Frais + Défaut)", "Plateforme B (Défaut moyen)"],
@@ -221,9 +313,8 @@ else:
     df_resultats = calculer_simulation(montant_sb, duree_mois_sb, reinvestissement_sb, data_sources)
     gain_baltis = df_resultats.loc[df_resultats["Plateforme"] == "Baltis", "Rendement Net Réel (€)"].values[0]
 
-    # --- SECTION : METRIQUES CUSTOM HTML (Remplace les st.metric moches) ---
+    # --- METRIQUES ---
     st.markdown("<h2>Résultat de votre simulation</h2>", unsafe_allow_html=True)
-    
     metrics_html = f"""
     <div style="display: flex; gap: 20px; margin-bottom: 40px; flex-wrap: wrap;">
         <div style="flex: 1; background: white; padding: 25px; border-radius: 12px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
@@ -242,7 +333,7 @@ else:
     """
     st.markdown(metrics_html, unsafe_allow_html=True)
 
-    # --- SECTION : GRAPHIQUE AFFINÉ & TABLEAU ---
+    # --- GRAPHIQUE & TABLEAU ---
     col_g1, col_g2 = st.columns([0.55, 0.45], gap="large")
     
     with col_g1:
@@ -250,25 +341,34 @@ else:
         df_plot = df_resultats.copy()
         df_plot = pd.melt(df_plot, id_vars=['Plateforme'], value_vars=['Rendement Brut (€)', 'Impact Frais (€)', 'Impact Défaut (Est. Perte) (€)'])
         
-        fig = px.bar(df_plot, x='Plateforme', y='value', color='variable', 
+        # Mappage de jolis noms pour le tooltip au lieu de noms de variables techniques
+        df_plot['Nom Variable'] = df_plot['variable'].map({
+            'Rendement Brut (€)': 'Gain Théorique',
+            'Impact Frais (€)': 'Frais Prélevés',
+            'Impact Défaut (Est. Perte) (€)': 'Risque Statistique'
+        })
+
+        fig = px.bar(df_plot, x='Plateforme', y='value', color='Nom Variable', 
                      barmode='relative',
-                     color_discrete_map={'Rendement Brut (€)': '#0A2540', 'Impact Frais (€)': '#F36121', 'Impact Défaut (Est. Perte) (€)': '#DC2626'})
+                     color_discrete_map={'Gain Théorique': '#0A2540', 'Frais Prélevés': '#F36121', 'Risque Statistique': '#DC2626'})
         
-        # Affinage du graphique Plotly pour faire "Pro"
+        # CUSTOMISATION PREMIUM DES BULLLES (TOOLTIPS)
+        fig.update_traces(hovertemplate="<b>%{x}</b><br>%{data.name}: <b>%{y:,.0f} €</b><extra></extra>")
+
         fig.update_layout(
             legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="left", x=0, title=""),
             font=dict(family="Plus Jakarta Sans, sans-serif", size=12, color="#475569"),
-            plot_bgcolor="rgba(0,0,0,0)", # Fond transparent
+            plot_bgcolor="rgba(0,0,0,0)",
             paper_bgcolor="rgba(0,0,0,0)",
             margin=dict(l=0, r=0, t=30, b=0),
-            height=350 # Réduire la hauteur énorme
+            height=350,
+            hoverlabel=dict(bgcolor="white", font_size=13, font_family="Plus Jakarta Sans")
         )
         fig.update_yaxes(showgrid=True, gridcolor="#E2E8F0", tickprefix="€")
-        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False}) # Cache la barre d'outils plotly
+        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
     with col_g2:
         st.markdown("<h3>Synthèse Chiffrée</h3>", unsafe_allow_html=True)
-        # On garde le dataframe mais on nettoie les colonnes inutiles pour la vue simplifiée
         df_display = df_resultats[['Plateforme', 'Rendement Brut Théorique (%)', 'Rendement Net Réel (€)']].copy()
         st.dataframe(df_display.style.format({
             "Rendement Brut Théorique (%)": "{:.1f}%",
@@ -277,13 +377,12 @@ else:
         
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # Bouton PDF Customisé via CSS global
+        # Bouton PDF
         pdf_bytes = generer_pdf_premium(st.session_state.user_prenom, st.session_state.user_nom, montant_sb, duree_mois_sb, gain_baltis, df_resultats)
         st.download_button("📄 Télécharger mon Rapport PDF", data=pdf_bytes, file_name="Simulation_Baltis.pdf", mime="application/pdf")
 
-    # --- SECTION : AVERTISSEMENTS (Fini le bloc jaune) ---
+    # --- AVERTISSEMENTS ---
     st.markdown("<br><hr style='border-color: #E2E8F0;'>", unsafe_allow_html=True)
-    
     warning_html = """
     <div style="background-color: #F8FAFC; border-left: 4px solid #94A3B8; padding: 20px; border-radius: 0 8px 8px 0; margin-top: 20px;">
         <h4 style="margin-top:0; color: #475569; font-size:1rem;">Avertissements et Limites (Régulation 2026)</h4>
