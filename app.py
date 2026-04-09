@@ -281,7 +281,7 @@ def generer_pdf_premium(prenom, nom, montant, duree, gain_baltis_total, df_compl
     
     pdf.cell(col_w, 8, txt="Intérêts Réels Générés :", align='R')
     pdf.set_font("Arial", "B", 10)
-    pdf.set_text_color(2D6A4F) # Vert gains
+    pdf.set_text_color(45, 106, 79) # Vert gains
     pdf.cell(col_w, 8, txt=f"+ {gain_baltis_total:,.0f} EUR", ln=True, align='L')
     pdf.set_text_color(0, 0, 0)
     pdf.set_font("Arial", "", 10)
