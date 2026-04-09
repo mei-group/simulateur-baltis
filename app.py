@@ -387,7 +387,13 @@ else:
         fig.update_traces(hovertemplate="<b>%{x}</b><br>%{data.name}: <b>%{y:,.0f} €</b><extra></extra>")
 
         fig.update_layout(
-            legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="left", x=0, title=""),
+            legend=dict(
+                orientation="h", yanchor="bottom", y=1.05, xanchor="left", x=0, title="",
+                itemclick=False,       # <-- AJOUT : Empêche de masquer une barre au clic
+                itemdoubleclick=False  # <-- AJOUT : Empêche l'isolement au double-clic
+            ),
+            xaxis=dict(fixedrange=True), # <-- AJOUT : Verrouille le zoom horizontal
+            yaxis=dict(fixedrange=True), # <-- AJOUT : Verrouille le zoom vertical
             font=dict(family="Plus Jakarta Sans, sans-serif", size=12, color="#475569"),
             plot_bgcolor="rgba(0,0,0,0)",
             paper_bgcolor="rgba(0,0,0,0)",
