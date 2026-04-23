@@ -150,7 +150,11 @@ def generer_pdf_premium(prenom, nom, montant, duree, gain_baltis_total, df_compl
             self.set_y(-25)
             self.set_font('Arial', 'I', 8)
             self.set_text_color(10, 37, 64)
-            self.multi_cell(0, 4, txt="Mention Légale AMF (Régulation 2026) : Investir comporte des risques, notamment de perte partielle ou totale du capital. Les performances passées ne préjugent pas des performances futures. Baltis est immatriculée sous le numéro [X] à l'ORIAS et régulée par l'AMF en tant que PSFP.", align='C')
+            # Texte mis à jour selon les directives client
+            legal_text = (
+                "Les performances passées ne préjugent pas des performances futures. Tout investissement comporte un risque de perte totale ou partielle du capital investi. Baltis est agréée par l'Autorité des Marchés Financiers (AMF) en tant que Prestataire de Services de Financement Participatif (PSFP) sous le numéro FP-2023-30."
+            )
+            self.multi_cell(0, 4, txt=legal_text, align='C')
             self.ln(1)
             self.cell(0, 5, 'Page ' + str(self.page_no()) + '/{nb}', 0, 0, 'C')
 
@@ -419,11 +423,14 @@ else:
 
     # --- AVERTISSEMENTS ---
     st.markdown("<br><hr style='border-color: #E2E8F0;'>", unsafe_allow_html=True)
+    
     warning_html = """
     <div style="background-color: #F8FAFC; border-left: 4px solid #94A3B8; padding: 20px; border-radius: 0 8px 8px 0; margin-top: 20px;">
-        <h4 style="margin-top:0; color: #475569; font-size:1rem;">Avertissements et Limites (Régulation 2026)</h4>
+        <h4 style="margin-top:0; color: #475569; font-size:1rem;">Avertissements et Mentions Légales</h4>
         <p style="font-size: 0.85rem; color: #64748B; margin-bottom: 0; line-height: 1.5;">
-        Outil pédagogique. Les résultats sont des projections basées sur des données historiques publiées et des modèles statistiques. Le taux de défaut de 0% constaté chez Baltis depuis 2016 est historique et ne constitue pas une garantie pour les opérations futures. Investir comporte des risques, notamment de perte partielle ou totale du capital investi. Baltis est immatriculée auprès de l'ORIAS sous le numéro [X] et régulée par l'Autorité des Marchés Financiers (PSFP).
+        Outil pédagogique. Les résultats sont des projections basées sur des données historiques publiées et des modèles statistiques. 
+        <br><b>Les performances passées ne préjugent pas des performances futures. Tout investissement comporte un risque de perte totale ou partielle du capital investi.</b> 
+        <br>Baltis est agréée par l'Autorité des Marchés Financiers (AMF) en tant que Prestataire de Services de Financement Participatif (PSFP) sous le numéro d'agrément FP-2023-30.
         </p>
     </div>
     """
