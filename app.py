@@ -50,40 +50,6 @@ custom_css = """
         box-shadow: 0 6px 20px rgba(243, 97, 33, 0.4) !important;
     }
 
-    [data-testid="stForm"] {
-        background: #FFFFFF;
-        border: 1px solid #E2E8F0;
-        border-radius: 16px;
-        padding: 30px;
-        box-shadow: 0 10px 30px rgba(10, 37, 64, 0.05);
-    }
-    .stTextInput input {
-        border-radius: 8px !important;
-        border: 1px solid #CBD5E1 !important;
-        padding: 12px 16px !important;
-        font-size: 1rem !important;
-        background-color: #F8FAFC !important;
-        transition: border-color 0.2s;
-    }
-    .stTextInput input:focus {
-        border-color: #F36121 !important;
-        box-shadow: 0 0 0 1px #F36121 !important;
-    }
-    [data-testid="stFormSubmitButton"] button {
-        background-color: #0A2540 !important; 
-        color: white !important;
-        border: none !important;
-        border-radius: 8px !important;
-        padding: 0.75rem 2rem !important;
-        font-weight: 600 !important;
-        width: 100% !important;
-        font-size: 1.1rem !important;
-        margin-top: 10px !important;
-    }
-    [data-testid="stFormSubmitButton"] button:hover {
-        background-color: #1a3c5e !important;
-    }
-
     .stSlider [data-testid="stTickBar"] { display: none; }
     
     .hoverlayer { font-family: 'Plus Jakarta Sans', sans-serif !important; }
@@ -91,13 +57,26 @@ custom_css = """
 """
 st.markdown(custom_css, unsafe_allow_html=True)
 
-# --- 3. INITIALISATION ÉTAT ---
+# --- 3. INITIALISATION ÉTAT ET DÉTECTION DU TOKEN ---
 if 'acces_debloque' not in st.session_state:
     st.session_state.acces_debloque = False
 if 'user_prenom' not in st.session_state:
     st.session_state.user_prenom = ""
 if 'user_nom' not in st.session_state:
     st.session_state.user_nom = ""
+
+# Lecture de l'URL pour débloquer l'accès
+if "token" in st.query_params:
+    if st.query_params["token"] == "baltis_vip":
+        st.session_state.acces_debloque = True
+        
+        # Récupération du prénom envoyé par GetResponse
+        if "name" in st.query_params:
+            st.session_state.user_prenom = st.query_params["name"].capitalize()
+        elif "firstname" in st.query_params:
+            st.session_state.user_prenom = st.query_params["firstname"].capitalize()
+        elif not st.session_state.user_prenom:
+            st.session_state.user_prenom = "Investisseur"
 
 # --- 4. FONCTIONS METIER ---
 def logout():
@@ -106,16 +85,12 @@ def logout():
     st.session_state.user_nom = ""
 
 def format_montant(val):
-    """Formate dynamiquement le slider de k à M selon le montant."""
     if val >= 1000000:
         return f"{val/1000000:g} M€"
     elif val >= 10000:
         return f"{val/1000:g} k€"
     else:
         return f"{val} €"
-
-def ajouter_contact_getresponse(prenom, nom, email):
-    return True 
 
 def calculer_simulation(montant, duree_mois, reinvestissement, plateforme_data):
     df = pd.DataFrame(plateforme_data)
@@ -132,7 +107,7 @@ def calculer_simulation(montant, duree_mois, reinvestissement, plateforme_data):
     df["Rendement Net Réel (€)"] = df["Rendement Brut (€)"] - df["Impact Frais (€)"] - df["Impact Défaut (Est. Perte) (€)"]
     return df
 
-# --- 5. FONCTION GENERATION PDF (AVEC TABLEAU PARFAIT) ---
+# --- 5. FONCTION GENERATION PDF ---
 def generer_pdf_premium(prenom, nom, montant, duree, gain_baltis_total, df_complet):
     class PDF(FPDF):
         def header(self):
@@ -150,9 +125,11 @@ def generer_pdf_premium(prenom, nom, montant, duree, gain_baltis_total, df_compl
             self.set_y(-25)
             self.set_font('Arial', 'I', 8)
             self.set_text_color(10, 37, 64)
-            # Texte mis à jour selon les directives client
             legal_text = (
-                "Les performances passées ne préjugent pas des performances futures. Tout investissement comporte un risque de perte totale ou partielle du capital investi. Baltis est agréée par l'Autorité des Marchés Financiers (AMF) en tant que Prestataire de Services de Financement Participatif (PSFP) sous le numéro FP-2023-30."
+                "Les performances passées ne préjugent pas des performances futures. "
+                "Tout investissement comporte un risque de perte totale ou partielle du capital investi. "
+                "Baltis est agréée par l'Autorité des Marchés Financiers (AMF) en tant que "
+                "Prestataire de Services de Financement Participatif (PSFP) sous le numéro FP-2023-30."
             )
             self.multi_cell(0, 4, txt=legal_text, align='C')
             self.ln(1)
@@ -164,7 +141,6 @@ def generer_pdf_premium(prenom, nom, montant, duree, gain_baltis_total, df_compl
     pdf.set_margins(15, 30, 15)
     pdf.ln(5)
 
-    # Info Personnelle
     pdf.set_font("Arial", "B", 14)
     pdf.set_text_color(10, 37, 64)
     pdf.cell(0, 10, txt=f"Rapport de Simulation Personnalisé pour : {prenom} {nom}", ln=True, align='C')
@@ -179,7 +155,6 @@ def generer_pdf_premium(prenom, nom, montant, duree, gain_baltis_total, df_compl
     pdf.cell(180, 8, txt=f"  Gain Réel Estimé Baltis (Avant Impôts) : {gain_baltis_total:,.0f} EUR", ln=True)
     pdf.ln(15)
 
-    # Titre Tableau
     pdf.set_font("Arial", "B", 11)
     pdf.set_text_color(243, 97, 33) 
     pdf.cell(0, 10, txt="Comparaison des Rendements Nets de Frais et Risque", ln=True)
@@ -188,12 +163,10 @@ def generer_pdf_premium(prenom, nom, montant, duree, gain_baltis_total, df_compl
     pdf.line(pdf.get_x(), pdf.get_y(), 195, pdf.get_y()) 
     pdf.ln(2)
 
-    # --- TABLEAU PARFAIT ---
     pdf.set_font("Arial", "B", 8.5)
     pdf.set_text_color(255, 255, 255)
     pdf.set_fill_color(10, 37, 64) 
     
-    # Largeurs ajustées (Total = 180mm) pour éviter tout dépassement
     w_plat = 50
     w_brut = 32
     w_frais = 32
@@ -232,7 +205,6 @@ def generer_pdf_premium(prenom, nom, montant, duree, gain_baltis_total, df_compl
 
     pdf.ln(10)
     
-    # Synthèse Baltis
     pdf.set_font("Arial", "B", 11)
     pdf.set_text_color(10, 37, 64)
     pdf.cell(0, 10, txt="Synthèse Projection Flux de Capital (Baltis)", ln=True)
@@ -284,44 +256,39 @@ with col_header2:
 
 
 # ==========================================
-# ETAPE 1 : FORMULAIRE DE CAPTURE
+# ÉCRAN DE BLOCAGE (GATED CONTENT)
 # ==========================================
 if not st.session_state.acces_debloque:
-    col_espace1, col_form, col_espace2 = st.columns([1, 2, 1])
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    col_espace1, col_lock, col_espace2 = st.columns([1, 2, 1])
     
-    with col_form:
-        st.markdown("<h3 style='text-align: center; margin-bottom: 5px;'>Accédez à votre simulation personnalisée</h3>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #64748B; margin-bottom: 25px;'>Découvrez gratuitement quel sera votre rendement réel net de frais et de risque.</p>", unsafe_allow_html=True)
-        
-        with st.form("lead_capture_form"):
-            col1, col2 = st.columns(2)
-            prenom_input = col1.text_input("Prénom")
-            nom_input = col2.text_input("Nom")
-            email_input = st.text_input("Adresse e-mail")
-            
-            submitted = st.form_submit_button("Débloquer mon simulateur gratuit")
-            
-            if submitted:
-                if prenom_input and email_input:
-                    ajouter_contact_getresponse(prenom_input, nom_input, email_input)
-                    st.session_state.acces_debloque = True
-                    st.session_state.user_prenom = prenom_input
-                    st.session_state.user_nom = nom_input
-                    st.rerun()
-                else:
-                    st.error("Veuillez remplir votre prénom et votre email.")
+    with col_lock:
+        lock_html = """
+        <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; padding: 40px; text-align: center; box-shadow: 0 10px 30px rgba(10, 37, 64, 0.05);">
+            <div style="font-size: 3rem; margin-bottom: 10px;">🔒</div>
+            <h2 style="margin-top: 0; color: #0A2540;">Accès restreint</h2>
+            <p style="color: #64748B; font-size: 1.1rem; margin-bottom: 30px;">
+                Ce simulateur premium est réservé. Pour y accéder gratuitement et obtenir vos résultats personnalisés, veuillez vous inscrire via notre page officielle.
+            </p>
+            <a href="https://www.baltis.com/" target="_self" style="text-decoration: none;">
+                <button style="background-color: #0A2540; color: white; border: none; border-radius: 8px; padding: 1rem 2rem; font-weight: 600; font-size: 1.1rem; cursor: pointer; width: 100%; transition: background-color 0.2s;">
+                    Accéder via Baltis.com
+                </button>
+            </a>
+        </div>
+        """
+        st.markdown(lock_html, unsafe_allow_html=True)
 
 # ==========================================
-# ETAPE 2 : SIMULATEUR PREMIUM (Débloqué)
+# SIMULATEUR PREMIUM (Débloqué)
 # ==========================================
 else:
     # --- SIDEBAR ---
-    st.sidebar.markdown(f"<div style='background-color:#0A2540; color:white; padding:15px; border-radius:8px; margin-bottom:20px; text-align:center;'>👋 Bienvenue <b>{st.session_state.user_prenom}</b></div>", unsafe_allow_html=True)
+    prenom_display = st.session_state.user_prenom if st.session_state.user_prenom else "Investisseur"
+    st.sidebar.markdown(f"<div style='background-color:#0A2540; color:white; padding:15px; border-radius:8px; margin-bottom:20px; text-align:center;'>👋 Bienvenue <b>{prenom_display}</b></div>", unsafe_allow_html=True)
     st.sidebar.markdown("### Vos Paramètres")
     
-    # Génération d'une échelle de valeurs ultra-fine pour un slider fluide (100 à 1 000 000)
     options_montants = list(range(100, 1000, 100)) + list(range(1000, 10000, 500)) + list(range(10000, 100000, 1000)) + list(range(100000, 1000001, 10000))
-    # Curseur formaté intelligemment (k et M)
     montant_sb = st.sidebar.select_slider(
         "Montant investi", 
         options=options_montants, 
@@ -329,14 +296,14 @@ else:
         format_func=format_montant
     )
     
-    # Curseur Durée de 6 à 60 mois
     duree_mois_sb = st.sidebar.slider("Durée envisagée (mois)", min_value=6, max_value=60, value=12, step=1)
-    
     reinvestissement_sb = st.sidebar.radio("Stratégie (Post-2026)", ["Projet unique (Bullet)", "Réinvestissement des intérêts à chaque remboursement"])
 
-    # Déconnexion
+    # Bouton Déconnexion
     st.sidebar.markdown("<br><br>", unsafe_allow_html=True)
-    if st.sidebar.button("🔄 Se déconnecter / Autre profil"):
+    if st.sidebar.button("🔄 Se déconnecter / Quitter"):
+        # Vide l'URL des paramètres pour vraiment re-verrouiller l'accès
+        st.query_params.clear()
         logout()
         st.rerun()
 
@@ -393,11 +360,10 @@ else:
         fig.update_layout(
             legend=dict(
                 orientation="h", yanchor="bottom", y=1.05, xanchor="left", x=0, title="",
-                itemclick=False,       # <-- AJOUT : Empêche de masquer une barre au clic
-                itemdoubleclick=False  # <-- AJOUT : Empêche l'isolement au double-clic
+                itemclick=False, itemdoubleclick=False
             ),
-            xaxis=dict(fixedrange=True), # <-- AJOUT : Verrouille le zoom horizontal
-            yaxis=dict(fixedrange=True), # <-- AJOUT : Verrouille le zoom vertical
+            xaxis=dict(fixedrange=True),
+            yaxis=dict(fixedrange=True),
             font=dict(family="Plus Jakarta Sans, sans-serif", size=12, color="#475569"),
             plot_bgcolor="rgba(0,0,0,0)",
             paper_bgcolor="rgba(0,0,0,0)",
@@ -418,12 +384,11 @@ else:
         
         st.markdown("<br>", unsafe_allow_html=True)
         
-        pdf_bytes = generer_pdf_premium(st.session_state.user_prenom, st.session_state.user_nom, montant_sb, duree_mois_sb, gain_baltis, df_resultats)
+        pdf_bytes = generer_pdf_premium(prenom_display, st.session_state.user_nom, montant_sb, duree_mois_sb, gain_baltis, df_resultats)
         st.download_button("📄 Télécharger mon Rapport PDF", data=pdf_bytes, file_name="Simulation_Baltis.pdf", mime="application/pdf")
 
     # --- AVERTISSEMENTS ---
     st.markdown("<br><hr style='border-color: #E2E8F0;'>", unsafe_allow_html=True)
-    
     warning_html = """
     <div style="background-color: #F8FAFC; border-left: 4px solid #94A3B8; padding: 20px; border-radius: 0 8px 8px 0; margin-top: 20px;">
         <h4 style="margin-top:0; color: #475569; font-size:1rem;">Avertissements et Mentions Légales</h4>
