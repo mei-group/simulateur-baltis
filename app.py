@@ -8,6 +8,10 @@ import os
 # --- 1. CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="Simulateur Crowdfunding | Baltis", layout="wide", initial_sidebar_state="expanded")
 
+# Fonction utilitaire pour espacer les milliers (ex: 90 000 au lieu de 90,000)
+def format_spaces(val):
+    return f"{val:,.0f}".replace(",", " ")
+
 # --- 2. CSS "PREMIUM+++" (BALTIS) ---
 custom_css = """
 <style>
@@ -27,7 +31,7 @@ custom_css = """
         visibility: hidden !important;
     }
 
-    /* FORCER LE THÈME CLAIR (Sécurité supplémentaire en plus du config.toml) */
+    /* FORCER LE THÈME CLAIR */
     html, body, [class*="css"], .stApp {
         font-family: 'Plus Jakarta Sans', sans-serif !important;
         color: #0A2540 !important;
@@ -45,6 +49,11 @@ custom_css = """
     }
     [data-testid="stSidebar"] * {
         color: #0A2540 !important;
+    }
+    
+    /* CORRECTION DU FOND BLEU SUR LE TEXTE DE BIENVENUE */
+    [data-testid="stSidebar"] .stMarkdown p {
+        background-color: transparent !important;
     }
     
     /* BOUTON TELECHARGER (ORANGE BALTIS) */
@@ -79,10 +88,7 @@ custom_css = """
         border-color: #CBD5E1 !important;
     }
 
-    /* SLIDERS (Orange Baltis) */
-    .stSlider > div > div > div > div {
-        background-color: #F36121 !important;
-    }
+    /* SLIDERS */
     .stSlider [data-testid="stTickBar"] { display: none; }
     
     /* RADIOS (Boutons de choix) */
@@ -185,10 +191,10 @@ def generer_pdf_premium(prenom, nom, montant, duree, gain_baltis_total, df_compl
     pdf.rect(15, pdf.get_y(), 180, 25, 'F') 
     pdf.set_font("Arial", "", 10)
     pdf.set_text_color(0, 0, 0)
-    pdf.cell(180, 8, txt=f"  Investissement prévu : {montant:,.0f} EUR", ln=True)
+    pdf.cell(180, 8, txt=f"  Investissement prévu : {format_spaces(montant)} EUR", ln=True)
     pdf.cell(180, 8, txt=f"  Durée envisagée : {duree} mois", ln=True)
     pdf.set_font("Arial", "B", 10)
-    pdf.cell(180, 8, txt=f"  Gain Réel Estimé Baltis (Avant Impôts) : {gain_baltis_total:,.0f} EUR", ln=True)
+    pdf.cell(180, 8, txt=f"  Gain Réel Estimé Baltis (Avant Impôts) : {format_spaces(gain_baltis_total)} EUR", ln=True)
     pdf.ln(15)
 
     pdf.set_font("Arial", "B", 11)
@@ -227,14 +233,14 @@ def generer_pdf_premium(prenom, nom, montant, duree, gain_baltis_total, df_compl
             pdf.set_fill_color(255, 255, 255)
         
         pdf.cell(w_plat, 9, str(row['Plateforme']), border=1, align='C', fill=True)
-        pdf.cell(w_brut, 9, f"{row['Rendement Brut (€)']:.0f} EUR", border=1, align='C', fill=True)
-        pdf.cell(w_frais, 9, f"- {row['Impact Frais (€)']:.0f} EUR", border=1, align='C', fill=True)
-        pdf.cell(w_risq, 9, f"- {row['Impact Défaut (Est. Perte) (€)']:.0f} EUR", border=1, align='C', fill=True)
+        pdf.cell(w_brut, 9, f"{format_spaces(row['Rendement Brut (€)'])} EUR", border=1, align='C', fill=True)
+        pdf.cell(w_frais, 9, f"- {format_spaces(row['Impact Frais (€)'])} EUR", border=1, align='C', fill=True)
+        pdf.cell(w_risq, 9, f"- {format_spaces(row['Impact Défaut (Est. Perte) (€)'])} EUR", border=1, align='C', fill=True)
         
         if row['Plateforme'] == "Baltis": 
             pdf.set_font("Arial", "B", 8.5)
         
-        pdf.cell(w_net, 9, f"{row['Rendement Net Réel (€)']:.0f} EUR", border=1, align='C', fill=True)
+        pdf.cell(w_net, 9, f"{format_spaces(row['Rendement Net Réel (€)'])} EUR", border=1, align='C', fill=True)
         pdf.set_font("Arial", "", 8.5)
         pdf.ln()
         fill_row = not fill_row
@@ -253,13 +259,13 @@ def generer_pdf_premium(prenom, nom, montant, duree, gain_baltis_total, df_compl
     col_w = 60
     pdf.cell(col_w, 8, txt="Capital Initial Investi :", align='R')
     pdf.set_font("Arial", "B", 10)
-    pdf.cell(col_w, 8, txt=f"{montant:,.0f} EUR", ln=True, align='L')
+    pdf.cell(col_w, 8, txt=f"{format_spaces(montant)} EUR", ln=True, align='L')
     pdf.set_font("Arial", "", 10)
     
     pdf.cell(col_w, 8, txt="Intérêts Réels Générés :", align='R')
     pdf.set_font("Arial", "B", 10)
     pdf.set_text_color(45, 106, 79)
-    pdf.cell(col_w, 8, txt=f"+ {gain_baltis_total:,.0f} EUR", ln=True, align='L')
+    pdf.cell(col_w, 8, txt=f"+ {format_spaces(gain_baltis_total)} EUR", ln=True, align='L')
     pdf.set_text_color(0, 0, 0)
     pdf.set_font("Arial", "", 10)
 
@@ -267,7 +273,7 @@ def generer_pdf_premium(prenom, nom, montant, duree, gain_baltis_total, df_compl
     pdf.set_font("Arial", "B", 10)
     pdf.set_fill_color(10, 37, 64)
     pdf.set_text_color(255, 255, 255)
-    pdf.cell(col_w, 8, txt=f" {montant + gain_baltis_total:,.0f} EUR", ln=True, align='L', fill=True)
+    pdf.cell(col_w, 8, txt=f" {format_spaces(montant + gain_baltis_total)} EUR", ln=True, align='L', fill=True)
     
     return pdf.output(dest="S").encode("latin-1")
 
@@ -278,7 +284,7 @@ col_header1, col_header2 = st.columns([0.8, 0.2])
 
 with col_header1:
     st.markdown("<h1 style='margin:0; font-size: 2rem; margin-top: -10px;'>Simulateur de rendement net</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='color: #64748B; margin: 5px 0 20px 0; font-size: 1.1rem; border-bottom: 1px solid #E2E8F0; padding-bottom: 15px;'>Ne vous arrêtez pas au taux brut. Calculez la rentabilité réelle de vos placements, nette de frais et de risques.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='color: #64748B; margin: 5px 0 20px 0; font-size: 1.1rem; border-bottom: 1px solid #E2E8F0; padding-bottom: 15px;'>Calculez l'impact réel des frais et du défaut sur votre épargne.</p>", unsafe_allow_html=True)
 
 with col_header2:
     if os.path.exists("logo.png"):
@@ -321,7 +327,17 @@ if not st.session_state.acces_debloque:
 else:
     # --- SIDEBAR ---
     prenom_display = st.session_state.user_prenom if st.session_state.user_prenom else "Investisseur"
-    st.sidebar.markdown(f"<div style='background-color:#0A2540; color:white; padding:15px; border-radius:8px; margin-bottom:20px; text-align:center;'>👋 Bienvenue <b>{prenom_display}</b></div>", unsafe_allow_html=True)
+    
+    # Encart bienvenue avec couleurs forcées
+    st.sidebar.markdown(
+        f"""
+        <div style="background-color: #0A2540; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
+            <span style="color: #FFFFFF !important; font-size: 1.1rem;">👋 Bienvenue <b style="color: #FFFFFF !important;">{prenom_display}</b></span>
+        </div>
+        """, 
+        unsafe_allow_html=True
+    )
+    
     st.sidebar.markdown("### Vos Paramètres")
     
     options_montants = list(range(100, 1000, 100)) + list(range(1000, 10000, 500)) + list(range(10000, 100000, 1000)) + list(range(100000, 1000001, 10000))
@@ -359,15 +375,15 @@ else:
     <div style="display: flex; gap: 20px; margin-bottom: 40px; flex-wrap: wrap;">
         <div style="flex: 1; background: white; padding: 25px; border-radius: 12px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
             <p style="color: #64748B; font-size: 0.9rem; margin: 0 0 5px 0; font-weight: 600; text-transform: uppercase;">Capital Initial</p>
-            <h3 style="color: #0A2540; font-size: 2rem; margin: 0; font-weight: 700;">{montant_sb:,.0f} €</h3>
+            <h3 style="color: #0A2540; font-size: 2rem; margin: 0; font-weight: 700;">{format_spaces(montant_sb)} €</h3>
         </div>
         <div style="flex: 1; background: #F8FAFC; padding: 25px; border-radius: 12px; border: 2px solid #2D6A4F; box-shadow: 0 10px 15px -3px rgba(45, 106, 79, 0.1);">
             <p style="color: #2D6A4F; font-size: 0.9rem; margin: 0 0 5px 0; font-weight: 700; text-transform: uppercase;">Intérêts Nets Baltis</p>
-            <h3 style="color: #2D6A4F; font-size: 2.2rem; margin: 0; font-weight: 800;">+ {gain_baltis:,.0f} €</h3>
+            <h3 style="color: #2D6A4F; font-size: 2.2rem; margin: 0; font-weight: 800;">+ {format_spaces(gain_baltis)} €</h3>
         </div>
         <div style="flex: 1; background: #0A2540; padding: 25px; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(10, 37, 64, 0.2);">
             <p style="color: #94A3B8; font-size: 0.9rem; margin: 0 0 5px 0; font-weight: 600; text-transform: uppercase;">Capital Total Récupéré</p>
-            <h3 style="color: white; font-size: 2rem; margin: 0; font-weight: 700;">{montant_sb + gain_baltis:,.0f} €</h3>
+            <h3 style="color: white; font-size: 2rem; margin: 0; font-weight: 700;">{format_spaces(montant_sb + gain_baltis)} €</h3>
         </div>
     </div>
     """
@@ -386,12 +402,15 @@ else:
             'Impact Frais (€)': 'Frais Prélevés',
             'Impact Défaut (Est. Perte) (€)': 'Risque Statistique'
         })
+        
+        # Ajout d'une colonne de données formatées avec espaces pour le survol du graphique
+        df_plot['Formatted Value'] = df_plot['value'].apply(lambda x: format_spaces(x))
 
-        fig = px.bar(df_plot, x='Plateforme', y='value', color='Nom Variable', 
+        fig = px.bar(df_plot, x='Plateforme', y='value', color='Nom Variable', custom_data=['Formatted Value'],
                      barmode='relative',
                      color_discrete_map={'Gain Théorique': '#0A2540', 'Frais Prélevés': '#F36121', 'Risque Statistique': '#DC2626'})
         
-        fig.update_traces(hovertemplate="<b>%{x}</b><br>%{data.name}: <b>%{y:,.0f} €</b><extra></extra>")
+        fig.update_traces(hovertemplate="<b>%{x}</b><br>%{data.name}: <b>%{customdata[0]} €</b><extra></extra>")
 
         fig.update_layout(
             legend=dict(
@@ -413,10 +432,12 @@ else:
     with col_g2:
         st.markdown("<h3>Synthèse Chiffrée</h3>", unsafe_allow_html=True)
         df_display = df_resultats[['Plateforme', 'Rendement Brut Théorique (%)', 'Rendement Net Réel (€)']].copy()
-        st.dataframe(df_display.style.format({
-            "Rendement Brut Théorique (%)": "{:.1f}%",
-            "Rendement Net Réel (€)": "{:.0f} €"
-        }), use_container_width=True, hide_index=True)
+        
+        # On formate directement la colonne pour intégrer l'espace des milliers
+        df_display['Rendement Net Réel (€)'] = df_display['Rendement Net Réel (€)'].apply(lambda x: f"{format_spaces(x)} €")
+        df_display['Rendement Brut Théorique (%)'] = df_display['Rendement Brut Théorique (%)'].apply(lambda x: f"{x:.1f}%")
+        
+        st.dataframe(df_display, use_container_width=True, hide_index=True)
         
         st.markdown("<br>", unsafe_allow_html=True)
         
