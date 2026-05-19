@@ -284,7 +284,7 @@ col_header1, col_header2 = st.columns([0.8, 0.2])
 
 with col_header1:
     st.markdown("<h1 style='margin:0; font-size: 2rem; margin-top: -10px;'>Simulateur de rendement net</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='color: #64748B; margin: 5px 0 20px 0; font-size: 1.1rem; border-bottom: 1px solid #E2E8F0; padding-bottom: 15px;'>Calculez l'impact réel des frais et du défaut sur votre épargne.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='color: #64748B; margin: 5px 0 20px 0; font-size: 1.1rem; border-bottom: 1px solid #E2E8F0; padding-bottom: 15px;'>Ne vous arrêtez pas au taux brut. Calculez la rentabilité réelle de vos placements, nette de frais et de risques..</p>", unsafe_allow_html=True)
 
 with col_header2:
     if os.path.exists("logo.png"):
