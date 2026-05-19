@@ -8,31 +8,46 @@ import os
 # --- 1. CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="Simulateur Crowdfunding | Baltis", layout="wide", initial_sidebar_state="expanded")
 
-# --- 2. CSS "PREMIUM+" ---
+# --- 2. CSS "PREMIUM+++" (BALTIS) ---
 custom_css = """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-    /* Cacher le menu natif, le bouton deploy, et LA BARRE DE CHARGEMENT pour éviter le clignotement */
-    #MainMenu {visibility: hidden;}
-    .stDeployButton {display:none;}
-    .st-emotion-cache-1dp5vir {display: none !important;} 
-    .st-emotion-cache-1aege4i {display: none !important;} 
+    /* NETTOYAGE TOTAL DE L'INTERFACE STREAMLIT */
+    [data-testid="stToolbar"], footer, #MainMenu, .stDeployButton, header, [class^="viewerBadge_container"], [data-testid="stDecoration"] {
+        display: none !important; 
+        visibility: hidden !important; 
+    }
+    
+    /* VERROUILLAGE DE LA SIDEBAR (On cache les boutons Ouvrir/Fermer) */
+    [data-testid="collapsedControl"], 
+    [data-testid="stSidebarCollapseButton"],
+    [data-testid="stSidebar"] button[kind="header"] {
+        display: none !important;
+        visibility: hidden !important;
+    }
 
-    html, body, [class*="css"] {
+    /* FORCER LE THÈME CLAIR (Sécurité supplémentaire en plus du config.toml) */
+    html, body, [class*="css"], .stApp {
         font-family: 'Plus Jakarta Sans', sans-serif !important;
         color: #0A2540 !important;
+        background-color: #FAFAFA !important;
     }
 
     h1 { font-weight: 800; font-size: 2.5rem; letter-spacing: -0.03em; margin-bottom: 0.5rem; color: #0A2540; }
     h2 { font-weight: 700; font-size: 1.8rem; letter-spacing: -0.02em; margin-top: 2rem; color: #0A2540; }
-    h3 { font-weight: 600; font-size: 1.4rem; }
+    h3 { font-weight: 600; font-size: 1.4rem; color: #0A2540; }
 
+    /* SIDEBAR */
     [data-testid="stSidebar"] {
         background-color: #F8FAFC !important;
         border-right: 1px solid #E2E8F0;
     }
+    [data-testid="stSidebar"] * {
+        color: #0A2540 !important;
+    }
     
+    /* BOUTON TELECHARGER (ORANGE BALTIS) */
     .stDownloadButton button {
         background-color: #F36121 !important;
         color: white !important;
@@ -42,15 +57,36 @@ custom_css = """
         font-weight: 600 !important;
         font-size: 1rem !important;
         box-shadow: 0 4px 14px rgba(243, 97, 33, 0.3) !important;
-        transition: all 0.2s ease;
-        width: 100%;
+        transition: all 0.2s ease !important;
+        width: 100% !important;
     }
     .stDownloadButton button:hover {
-        transform: translateY(-2px);
+        transform: translateY(-2px) !important;
         box-shadow: 0 6px 20px rgba(243, 97, 33, 0.4) !important;
     }
+    .stDownloadButton button p { color: white !important; }
 
+    /* BOUTONS SIDEBAR (Déconnexion) */
+    [data-testid="stSidebar"] .stButton button {
+        background-color: #FFFFFF !important;
+        color: #0A2540 !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 8px !important;
+        transition: all 0.2s ease !important;
+    }
+    [data-testid="stSidebar"] .stButton button:hover {
+        background-color: #F1F5F9 !important;
+        border-color: #CBD5E1 !important;
+    }
+
+    /* SLIDERS (Orange Baltis) */
+    .stSlider > div > div > div > div {
+        background-color: #F36121 !important;
+    }
     .stSlider [data-testid="stTickBar"] { display: none; }
+    
+    /* RADIOS (Boutons de choix) */
+    .stRadio p { color: #0A2540 !important; font-weight: 500 !important; }
     
     .hoverlayer { font-family: 'Plus Jakarta Sans', sans-serif !important; }
 </style>
@@ -242,7 +278,7 @@ col_header1, col_header2 = st.columns([0.8, 0.2])
 
 with col_header1:
     st.markdown("<h1 style='margin:0; font-size: 2rem; margin-top: -10px;'>Simulateur de rendement net</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='color: #64748B; margin: 5px 0 20px 0; font-size: 1.1rem; border-bottom: 1px solid #E2E8F0; padding-bottom: 15px;'>Calculez l'impact réel des frais et du défaut sur votre épargne.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='color: #64748B; margin: 5px 0 20px 0; font-size: 1.1rem; border-bottom: 1px solid #E2E8F0; padding-bottom: 15px;'>Ne vous arrêtez pas au taux brut. Calculez la rentabilité réelle de vos placements, nette de frais et de risques.</p>", unsafe_allow_html=True)
 
 with col_header2:
     if os.path.exists("logo.png"):
