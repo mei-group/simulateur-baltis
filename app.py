@@ -47,13 +47,14 @@ custom_css = """
         background-color: #F8FAFC !important;
         border-right: 1px solid #E2E8F0;
     }
-    [data-testid="stSidebar"] * {
-        color: #0A2540 !important;
-    }
     
-    /* CORRECTION DU FOND BLEU SUR LE TEXTE DE BIENVENUE */
-    [data-testid="stSidebar"] .stMarkdown p {
+    /* ENCART DE BIENVENUE (Force le texte en blanc) */
+    .welcome-box, .welcome-box * {
+        color: #FFFFFF !important;
+    }
+    .welcome-box p {
         background-color: transparent !important;
+        margin: 0 !important;
     }
     
     /* BOUTON TELECHARGER (ORANGE BALTIS) */
@@ -284,7 +285,7 @@ col_header1, col_header2 = st.columns([0.8, 0.2])
 
 with col_header1:
     st.markdown("<h1 style='margin:0; font-size: 2rem; margin-top: -10px;'>Simulateur de rendement net</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='color: #64748B; margin: 5px 0 20px 0; font-size: 1.1rem; border-bottom: 1px solid #E2E8F0; padding-bottom: 15px;'>Ne vous arrêtez pas au taux brut. Calculez la rentabilité réelle de vos placements, nette de frais et de risques..</p>", unsafe_allow_html=True)
+    st.markdown("<p style='color: #64748B; margin: 5px 0 20px 0; font-size: 1.1rem; border-bottom: 1px solid #E2E8F0; padding-bottom: 15px;'>Ne vous arrêtez pas au taux brut. Calculez la rentabilité réelle de vos placements, nette de frais et de risques.</p>", unsafe_allow_html=True)
 
 with col_header2:
     if os.path.exists("logo.png"):
@@ -328,11 +329,11 @@ else:
     # --- SIDEBAR ---
     prenom_display = st.session_state.user_prenom if st.session_state.user_prenom else "Investisseur"
     
-    # Encart bienvenue avec couleurs forcées
+    # Encart bienvenue avec CSS intégré
     st.sidebar.markdown(
         f"""
-        <div style="background-color: #0A2540; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
-            <span style="color: #FFFFFF !important; font-size: 1.1rem;">👋 Bienvenue <b style="color: #FFFFFF !important;">{prenom_display}</b></span>
+        <div class="welcome-box" style="background-color: #0A2540; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
+            <p style="font-size: 1.1rem;">👋 Bienvenue <b style="font-weight: 700;">{prenom_display}</b></p>
         </div>
         """, 
         unsafe_allow_html=True
